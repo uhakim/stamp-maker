@@ -818,7 +818,8 @@ function stickerImage(st) {
     const x = c.getContext('2d'); x.font = m.font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#000';
     x.fillText(st.text, c.width / 2, c.height / 2 + px * 0.05);
   } else if (st.type === 'img') {
-    const im = st.img; if (!im || !im.complete || !im.naturalWidth) return null;
+    const im = st.img;
+    if (!im || !im.complete || !im.naturalWidth) { if (im && !im._waiting) { im._waiting = true; im.addEventListener('load', () => { im._waiting = false; render(); }, { once: true }); } return null; }
     const n = Math.ceil(st.size), w = Math.max(1, Math.ceil(n * im.naturalWidth / im.naturalHeight));
     c = document.createElement('canvas'); c.width = w; c.height = n;
     const x = c.getContext('2d'); if (st.flip) { x.translate(w, 0); x.scale(-1, 1); } x.drawImage(im, 0, 0, w, n);
@@ -845,8 +846,13 @@ function addSticker(st) {
     ? [[R.x + 110, R.y + R.h * 0.3], [R.x + R.w - 110, R.y + R.h * 0.3], [R.x + 110, R.y + R.h * 0.72], [R.x + R.w - 110, R.y + R.h * 0.72]]
     : [[R.x + 100, cy], [R.x + R.w - 100, cy], [R.x + 290, cy], [R.x + R.w - 290, cy]];
   st.x = slots[k][0]; st.y = slots[k][1]; st.flip = false;
-  if (st.type === 'img' && st.img && !st.img.complete) st.img.addEventListener('load', render, { once: true });
   state.stickers.push(st); selectSticker(state.stickers.length - 1); render(); updateButtons();
+  if (st.type === 'img' && st.img) {
+    // 그림이 아직 내려받는 중이거나 디코딩 전이면 끝난 뒤 다시 그린다 (안 보이던 문제 대책)
+    const again = () => { stkCache.clear(); render(); };
+    if (st.img.decode) st.img.decode().then(again).catch(again); else st.img.addEventListener('load', again, { once: true });
+    setTimeout(again, 600); setTimeout(again, 2500);
+  }
 }
 (function initStickers() {
   $('stkSize').addEventListener('input', () => { const st = state.stickers[state.activeStk]; if (!st) return; st.size = +$('stkSize').value; $('stkSizeOut').textContent = (st.size / 40).toFixed(1) + 'mm'; render(); });
