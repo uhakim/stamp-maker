@@ -2,7 +2,8 @@
  * 도장 도안 제출 수신기 (Google Apps Script 웹앱)
  * - 학생 앱에서 POST로 보낸 PNG를 내 드라이브의 "도장도안_제출" 폴더에 저장한다.
  * - 같은 폴더의 "제출기록" 스프레드시트에 한 줄씩 기록한다.
- * - 같은 학급_번호_이름 파일이 이미 있으면 기존 파일은 "이전제출" 하위 폴더로 옮기고 새 파일을 저장한다.
+ * - 학급(예: 4-3)별 하위 폴더에 저장한다. 제출기록 시트는 최상위 폴더에 하나만 둔다.
+ * - 같은 학급_번호_이름 파일이 이미 있으면 기존 파일은 그 반 폴더의 "이전제출" 하위 폴더로 옮기고 새 파일을 저장한다.
  *
  * 배포: 배포 > 새 배포 > 유형 "웹 앱", 실행 주체 "나", 액세스 권한 "모든 사용자"
  */
@@ -51,7 +52,8 @@ function doPost(e) {
     const base = cls + '_' + num + '_' + name;
     const fname = base + '.png';
 
-    const folder = getFolder_();
+    const root = getFolder_();
+    const folder = getSubFolder_(root, cls);   // 반별 하위 폴더 (예: 4-3)
     const existing = folder.getFilesByName(fname);
     if (existing.hasNext()) {
       const old = getSubFolder_(folder, OLD_FOLDER_NAME);
@@ -64,7 +66,7 @@ function doPost(e) {
     }
     const bytes = Utilities.base64Decode(d.image.split(',')[1]);
     const file = folder.createFile(Utilities.newBlob(bytes, 'image/png', fname));
-    getSheet_(folder).appendRow([new Date(), cls, num, name, d.top || '', d.bottom || '', fname, file.getUrl()]);
+    getSheet_(root).appendRow([new Date(), cls, num, name, d.top || '', d.bottom || '', fname, file.getUrl()]);
     return out_({ ok: true, file: fname });
   } catch (err) {
     return out_({ ok: false, error: String(err) });

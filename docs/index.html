@@ -84,6 +84,12 @@
     <div class="card">
       <h2><span class="n">1</span>누구의 도장인가요?</h2>
       <div class="row">
+        <label class="f">학년
+          <select id="grade"></select>
+        </label>
+        <label class="f">반
+          <select id="ban"></select>
+        </label>
         <label class="f">번호
           <select id="num"></select>
         </label>
@@ -157,7 +163,7 @@
         <button class="btn primary" id="btnSend" style="flex:2" disabled>📤 선생님께 보내기</button>
         <button class="btn" id="btnDownload" style="flex:1" disabled>⬇️ 내려받기</button>
       </div>
-      <p class="hint" id="sendHint">번호, 이름, 그림이 모두 있어야 보낼 수 있어요.</p>
+      <p class="hint" id="sendHint">학년, 반, 번호, 이름, 그림이 모두 있어야 보낼 수 있어요.</p>
     </div>
   </aside>
 </main>
@@ -203,14 +209,17 @@
 // ===== 설정 =====
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbxC1pnYQytlMRs48Z4XV02Aq0wQ4l1zRCmv72oqnTknrLYk3mjuUoiZUzkMKDNH1XTO/exec', // 구글 앱스 스크립트 웹앱 URL (학교 계정 배포 v1)
-  CLASS: '4-3',           // 기본 학급. 주소에 ?cls=4-3 을 붙이면 그 값이 우선
+  CLASS: '',              // 기본 학급(비우면 직접 선택). 주소에 ?cls=4-3 을 붙이면 그 값이 미리 선택됨
+  GRADES: [1, 2, 3, 4, 5, 6],
+  BANS: Array.from({ length: 12 }, (_, i) => i + 1),
   NUMBERS: [...Array.from({ length: 20 }, (_, i) => i + 1), ...Array.from({ length: 20 }, (_, i) => i + 41)], // 선택 가능한 번호: 1~20, 41~60
   SIZE: 1000,             // 출력 PNG 한 변 (px). 25mm 기준 40px/mm
 };
 const params = new URLSearchParams(location.search);
-const CLS = (params.get('cls') || CONFIG.CLASS).trim();
+const PRESET_CLS = (params.get('cls') || CONFIG.CLASS || localStorage.getItem('stamp.cls') || '').trim();
 if (params.get('gas')) CONFIG.GAS_URL = params.get('gas');
-document.getElementById('clsLabel').textContent = CLS + ' 학급';
+function clsValue() { const g = document.getElementById('grade').value, b = document.getElementById('ban').value; return g && b ? `${g}-${b}` : ''; }
+function updateClsLabel() { const c = clsValue(); document.getElementById('clsLabel').textContent = c ? c.replace('-', '학년 ') + '반' : ''; }
 
 const FONTS = [
   { id: 'blackhan', name: '굵은 고딕', css: "'Black Han Sans'", weight: 400 },
@@ -252,6 +261,13 @@ const preview = $('preview'), pctx = preview.getContext('2d');
 
 // ===== 입력 UI 구성 =====
 (function initInputs() {
+  const g = $('grade'), b = $('ban');
+  g.innerHTML = '<option value="">학년</option>' + CONFIG.GRADES.map(n => `<option value="${n}">${n}학년</option>`).join('');
+  b.innerHTML = '<option value="">반</option>' + CONFIG.BANS.map(n => `<option value="${n}">${n}반</option>`).join('');
+  const m = PRESET_CLS.match(/^(\d+)-(\d+)$/);
+  if (m) { g.value = m[1]; b.value = m[2]; }
+  const onCls = () => { const c = clsValue(); if (c) localStorage.setItem('stamp.cls', c); updateClsLabel(); updateButtons(); };
+  g.addEventListener('change', onCls); b.addEventListener('change', onCls); updateClsLabel();
   const sel = $('num');
   sel.innerHTML = '<option value="">번호</option>' + CONFIG.NUMBERS.map(n => `<option value="${n}">${n}번</option>`).join('');
   sel.value = localStorage.getItem('stamp.num') || '';
@@ -704,10 +720,10 @@ $('btnSim').addEventListener('click', () => {
 $('simClose').addEventListener('click', () => $('simModal').classList.remove('open'));
 
 // ===== 내려받기 / 보내기 =====
-function ready() { return !!(state.processed && $('num').value && $('name').value.trim()); }
+function ready() { return !!(state.processed && clsValue() && $('num').value && $('name').value.trim()); }
 function updateButtons() { const ok = ready(); $('btnSend').disabled = !ok; $('btnDownload').disabled = !state.processed; }
 function exportPNG() { const c = document.createElement('canvas'); c.width = c.height = CONFIG.SIZE; drawStamp(c.getContext('2d'), true); return c.toDataURL('image/png'); }
-function fileBase() { return `${CLS}_${String($('num').value).padStart(2, '0')}_${$('name').value.trim().replace(/[\\/:*?"<>|]/g, '')}`; }
+function fileBase() { return `${clsValue()}_${String($('num').value).padStart(2, '0')}_${$('name').value.trim().replace(/[\\/:*?"<>|]/g, '')}`; }
 
 $('btnDownload').addEventListener('click', () => {
   const a = document.createElement('a'); a.href = exportPNG(); a.download = (ready() ? fileBase() : '도장도안') + '.png'; a.click();
@@ -719,7 +735,7 @@ $('btnSend').addEventListener('click', async () => {
   const btn = $('btnSend'); btn.disabled = true; const orig = btn.textContent; btn.textContent = '보내는 중…';
   setStatus('', '');
   try {
-    const payload = { cls: CLS, num: $('num').value, name: $('name').value.trim(), top: $('topText').value.trim(), bottom: $('bottomText').value.trim(), image: exportPNG() };
+    const payload = { cls: clsValue(), num: $('num').value, name: $('name').value.trim(), top: $('topText').value.trim(), bottom: $('bottomText').value.trim(), image: exportPNG() };
     const res = await fetch(CONFIG.GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
     const j = await res.json();
     if (!j.ok) throw new Error(j.error || '서버 오류');
