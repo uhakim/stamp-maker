@@ -130,6 +130,9 @@
       </div>
       <p class="hint">비워 두어도 돼요. 글자가 없으면 그림이 더 커져요.</p>
       <div class="fontcards" id="fontCards" style="margin-top:10px"></div>
+      <div style="margin-top:12px;font-weight:700;font-size:15px;color:var(--muted)">글자 모양</div>
+      <div class="chips" id="styleChips" style="margin-top:6px"></div>
+      <p class="hint" id="styleHint"></p>
     </div>
 
     <div class="card">
@@ -216,6 +219,13 @@ const FONTS = [
   { id: 'gugi',     name: '멋글씨',   css: "'Gugi'", weight: 400 },
   { id: 'noto',     name: '기본 굵게', css: "'Noto Sans KR'", weight: 900 },
 ];
+const TEXT_STYLES = [
+  { id: 'plain',   name: '직선',     hint: '가장 또렷하게 찍혀요.' },
+  { id: 'curve',   name: '곡선',     hint: '위 글자는 위로, 아래 글자는 아래로 휘어요. 도장에서 가장 많이 쓰는 모양이에요.' },
+  { id: 'ribbon',  name: '리본',     hint: '리본 띠 안에 글자가 들어가요. 글자 수가 적을수록 예뻐요.' },
+  { id: 'pill',    name: '둥근 상자', hint: '둥근 테두리 상자 안에 글자가 들어가요.' },
+  { id: 'reverse', name: '검정 띠',  hint: '검정 띠 위에 흰 글자예요. 굵은 글씨체로 하고 글자 수를 적게 해야 잘 찍혀요.' },
+];
 const BORDERS = [
   { id: 'single', name: '한 줄' },
   { id: 'double', name: '두 줄' },
@@ -234,6 +244,7 @@ const state = {
   processed: null,  // 검정만 남긴 투명 캔버스
   font: localStorage.getItem('stamp.font') || 'blackhan',
   border: localStorage.getItem('stamp.border') || 'single',
+  textStyle: localStorage.getItem('stamp.textStyle') || 'plain',
 };
 
 const $ = id => document.getElementById(id);
@@ -271,6 +282,17 @@ const preview = $('preview'), pctx = preview.getContext('2d');
     d.addEventListener('click', () => { state.border = b.id; localStorage.setItem('stamp.border', b.id); bc.querySelectorAll('.bcard').forEach(x => x.classList.toggle('active', x === d)); render(); });
     bc.appendChild(d);
   });
+
+  const sc = $('styleChips');
+  const setHint = () => { const st = TEXT_STYLES.find(x => x.id === state.textStyle); $('styleHint').textContent = st ? st.hint : ''; };
+  TEXT_STYLES.forEach(t => {
+    const d = document.createElement('div');
+    d.className = 'chip' + (t.id === state.textStyle ? ' active' : '');
+    d.textContent = t.name;
+    d.addEventListener('click', () => { state.textStyle = t.id; localStorage.setItem('stamp.textStyle', t.id); sc.querySelectorAll('.chip').forEach(x => x.classList.toggle('active', x === d)); setHint(); render(); });
+    sc.appendChild(d);
+  });
+  setHint();
 
   ['topText', 'bottomText'].forEach(id => $(id).addEventListener('input', render));
   $('thr').addEventListener('input', e => { state.thr = +e.target.value; $('thrOut').textContent = e.target.value; reprocess(); });
@@ -521,7 +543,7 @@ function layout() {
   const S = CONFIG.SIZE, top = $('topText').value.trim(), bottom = $('bottomText').value.trim();
   const hasBorder = state.border !== 'none';
   const inner = hasBorder ? 95 : 60;                // 테두리 안쪽 시작 위치
-  const band = 170;                                  // 글자 띠 높이
+  const band = { plain: 170, curve: 265, ribbon: 215, pill: 190, reverse: 190 }[state.textStyle] || 170; // 글자 띠 높이
   const imgTop = top ? inner + band : inner, imgBottom = bottom ? S - inner - band : S - inner;
   return { S, top, bottom, inner, band, img: { x: inner, y: imgTop, w: S - inner * 2, h: imgBottom - imgTop } };
 }
@@ -540,17 +562,50 @@ function drawStamp(ctx, forExport) {
   // 글자
   const f = FONTS.find(x => x.id === state.font) || FONTS[0];
   const maxW = S - L.inner * 2 - 20;
-  const drawText = (text, cy) => {
-    if (!text) return true;
-    let size = 130, ok = true;
-    for (; size >= 60; size -= 4) { ctx.font = `${f.weight} ${size}px ${f.css}`; if (ctx.measureText(text).width <= maxW) break; }
-    if (size < 60) { size = 60; ok = false; }
-    ctx.font = `${f.weight} ${size}px ${f.css}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(text, S / 2, cy, maxW);
-    return ok;
+  const setFont = size => { ctx.font = `${f.weight} ${size}px ${f.css}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; };
+  const fitSize = (text, width, start = 130, min = 56) => {
+    for (let size = start; size >= min; size -= 4) { setFont(size); if (ctx.measureText(text).width <= width) return { size, ok: true }; }
+    return { size: min, ok: false };
   };
-  const okTop = drawText(L.top, L.inner + L.band / 2 - 4);
-  const okBottom = drawText(L.bottom, S - L.inner - L.band / 2 + 4);
+  const drawBand = (text, pos) => {
+    if (!text) return true;
+    const cy = pos === 'top' ? L.inner + L.band / 2 : S - L.inner - L.band / 2;
+    ctx.fillStyle = '#000'; ctx.strokeStyle = '#000'; ctx.lineJoin = 'round';
+    switch (state.textStyle) {
+      case 'curve': return drawCurvedText(ctx, text, pos, { S, outerY: pos === 'top' ? L.inner + 24 : S - L.inner - 24, maxW, setFont });
+      case 'pill': case 'reverse': {
+        const { size, ok } = fitSize(text, maxW - 130, 120);
+        const w = ctx.measureText(text).width + 100, h = size * 1.4, x = S / 2 - w / 2, y = cy - h / 2;
+        if (state.textStyle === 'pill') { ctx.lineWidth = 14; roundRect(ctx, x, y, w, h, h / 2); ctx.stroke(); ctx.fillStyle = '#000'; ctx.fillText(text, S / 2, cy + size * 0.05); }
+        else { roundRect(ctx, x, y, w, h, h / 2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText(text, S / 2, cy + size * 0.05); ctx.fillStyle = '#000'; }
+        return ok;
+      }
+      case 'ribbon': {
+        const { size, ok } = fitSize(text, maxW * 0.6 - 60, 110);
+        const h = size * 1.45, cw = Math.min(maxW - 2 * 90, Math.max(ctx.measureText(text).width + 80, maxW * 0.45));
+        const tw = Math.min(120, (maxW - cw) / 2), lx = S / 2 - cw / 2, rx = S / 2 + cw / 2, off = h * 0.22, lw = 14;
+        ctx.lineWidth = lw;
+        // 양쪽 꼬리 (뒤쪽, 살짝 아래)
+        const tail = (dir) => {
+          const x0 = dir < 0 ? lx + 24 : rx - 24, x1 = dir < 0 ? lx - tw : rx + tw, notch = x1 - dir * tw * 0.42;
+          ctx.beginPath(); ctx.moveTo(x0, cy - h / 2 + off); ctx.lineTo(x1, cy - h / 2 + off); ctx.lineTo(notch, cy + off); ctx.lineTo(x1, cy + h / 2 + off); ctx.lineTo(x0, cy + h / 2 + off); ctx.closePath();
+          ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
+        };
+        tail(-1); tail(1);
+        // 접힌 부분 (어두운 삼각)
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.moveTo(lx, cy + h / 2); ctx.lineTo(lx + 24, cy + h / 2 + off); ctx.lineTo(lx + 24, cy + h / 2); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(rx, cy + h / 2); ctx.lineTo(rx - 24, cy + h / 2 + off); ctx.lineTo(rx - 24, cy + h / 2); ctx.closePath(); ctx.fill();
+        // 가운데 띠
+        ctx.fillStyle = '#fff'; ctx.fillRect(lx, cy - h / 2, cw, h); ctx.strokeRect(lx, cy - h / 2, cw, h);
+        ctx.fillStyle = '#000'; setFont(size); ctx.fillText(text, S / 2, cy + size * 0.05, cw - 40);
+        return ok;
+      }
+      default: { const { size, ok } = fitSize(text, maxW); setFont(size); ctx.fillText(text, S / 2, cy, maxW); return ok; }
+    }
+  };
+  const okTop = drawBand(L.top, 'top');
+  const okBottom = drawBand(L.bottom, 'bottom');
 
   // 그림
   if (state.processed) {
@@ -568,6 +623,27 @@ function drawStamp(ctx, forExport) {
     ctx.putImageData(id, 0, 0);
   }
   return { okTop, okBottom };
+}
+function drawCurvedText(ctx, text, pos, o) {
+  // 원호를 따라 한 글자씩 배치. 위 글자는 위로 볼록, 아래 글자는 아래로 볼록, 글자는 항상 바로 선 방향.
+  const R = 900, chars = [...text];
+  const spacing = 0.08; // 글자 사이 띄움 (글자 크기 비율)
+  const widthOf = sz => { o.setFont(sz); let w = 0; for (const ch of chars) w += ctx.measureText(ch).width + sz * spacing; return w - sz * spacing; };
+  let size = 120, ok = true;
+  for (; size >= 56; size -= 4) if (widthOf(size) <= o.maxW * 0.96) break;
+  if (size < 56) { size = 56; ok = false; }
+  o.setFont(size);
+  const rMid = R - size / 2;
+  const cx = o.S / 2, cyC = pos === 'top' ? o.outerY + R : o.outerY - R;
+  const total = widthOf(size); let cum = -total / 2;
+  for (const ch of chars) {
+    const w = ctx.measureText(ch).width, sArc = cum + w / 2; cum += w + size * spacing;
+    const theta = pos === 'top' ? -Math.PI / 2 + sArc / rMid : Math.PI / 2 - sArc / rMid;
+    const px = cx + rMid * Math.cos(theta), py = cyC + rMid * Math.sin(theta);
+    const rot = pos === 'top' ? theta + Math.PI / 2 : theta - Math.PI / 2;
+    ctx.save(); ctx.translate(px, py); ctx.rotate(rot); ctx.fillText(ch, 0, 0); ctx.restore();
+  }
+  return ok;
 }
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
