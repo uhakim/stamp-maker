@@ -112,5 +112,10 @@
   "file": "t09_congrats.png",
   "name": "축하해",
   "wide": true
+ },
+ {
+  "file": "t10_emblem.png",
+  "name": "학교 로고",
+  "wide": true
  }
 ]
