@@ -66,6 +66,12 @@
   .modal .box { background: #fff; border-radius: 16px; padding: 14px; max-width: 96vw; max-height: 96vh; display: flex; flex-direction: column; gap: 10px; }
   .modal video, .modal canvas { max-width: 90vw; max-height: 70vh; background: #000; border-radius: 10px; touch-action: none; }
   .modal .row { justify-content: center; }
+  .pgroups { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; overflow-y: auto; max-height: 62vh; width: min(92vw, 760px); padding: 2px; }
+  .pcard { border: 2px solid var(--line); border-radius: 12px; background: #fff; padding: 6px 4px 4px; text-align: center; cursor: pointer; }
+  .pcard:active { border-color: var(--accent); }
+  .pcard img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; }
+  .pcard .name { font-size: 13px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 15px; display: none; z-index: 60; max-width: 90vw; }
   .imgtools { display: none; margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
   .imgtools.show { display: block; }
@@ -105,10 +111,11 @@
         <button class="btn big" id="btnFile">📁 그림 파일<small>저장된 그림 고르기</small></button>
         <button class="btn big" id="btnCam">📷 사진 찍기<small>종이에 그린 그림 찍기</small></button>
         <button class="btn big" id="btnPaste">📋 붙여넣기<small>캡처한 그림 넣기</small></button>
+        <button class="btn big" id="btnPreset">🎨 도안 고르기<small>준비된 그림에서 고르기</small></button>
       </div>
       <input type="file" id="fileInput" accept="image/*" hidden>
       <input type="file" id="camInput" accept="image/*" capture="environment" hidden>
-      <p class="hint">AI나 인터넷에서 찾은 그림은 화면을 캡처한 뒤(<span class="kbd">Win</span>+<span class="kbd">Shift</span>+<span class="kbd">S</span>) 이 페이지에서 <span class="kbd">Ctrl</span>+<span class="kbd">V</span>를 누르거나 붙여넣기 버튼을 눌러요.<br>그림은 자동으로 검정 한 가지 색으로 바뀌어요. 큰 그림 하나가 작은 그림 여러 개보다 좋아요.</p>
+      <p class="hint">AI나 인터넷에서 찾은 그림은 화면을 캡처한 뒤(<span class="kbd">Win</span>+<span class="kbd">Shift</span>+<span class="kbd">S</span>) 이 페이지에서 <span class="kbd">Ctrl</span>+<span class="kbd">V</span>를 누르거나 붙여넣기 버튼을 눌러요.<br>그림은 자동으로 검정 한 가지 색으로 바뀌어요. 큰 그림 하나가 작은 그림 여러 개보다 좋아요.<br>그림이 없으면 <b>도안 고르기</b>에서 준비된 그림을 골라도 돼요.</p>
 
       <div class="imgtools" id="imgTools">
         <div class="row" style="margin-bottom:6px">
@@ -190,6 +197,17 @@
       <button class="btn primary" id="cropOk">✅ 이대로 자르기</button>
       <button class="btn ghost" id="cropAll">전체 사용</button>
       <button class="btn ghost" id="cropCancel">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 준비된 도안 -->
+<div class="modal" id="presetModal">
+  <div class="box">
+    <div class="pgroups" id="presetGroups"></div>
+    <div class="pgrid" id="presetGrid"><p class="hint" style="grid-column:1/-1;text-align:center">불러오는 중…</p></div>
+    <div class="row">
+      <button class="btn ghost" id="presetClose">닫기</button>
     </div>
   </div>
 </div>
@@ -371,6 +389,54 @@ function loadBlob(blob, kind) {
   };
   img.onerror = () => { URL.revokeObjectURL(url); toast('그림을 읽지 못했어요. 다른 파일을 골라 보세요'); };
   img.src = url;
+}
+
+// ===== 준비된 도안 (docs/presets/presets.json) =====
+const PRESETS = { list: null, group: null };
+$('btnPreset').addEventListener('click', openPresets);
+$('presetClose').addEventListener('click', () => $('presetModal').classList.remove('open'));
+$('presetModal').addEventListener('click', e => { if (e.target === $('presetModal')) $('presetModal').classList.remove('open'); });
+async function openPresets() {
+  $('presetModal').classList.add('open');
+  if (!PRESETS.list) {
+    try {
+      const r = await fetch('presets/presets.json', { cache: 'no-cache' });
+      if (!r.ok) throw new Error(r.status);
+      PRESETS.list = await r.json();
+    } catch (err) {
+      $('presetGrid').innerHTML = '<p class="hint" style="grid-column:1/-1;text-align:center">도안을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 눌러 보세요.</p>';
+      return;
+    }
+    const groups = [...new Set(PRESETS.list.map(p => p.group))];
+    PRESETS.group = groups[0];
+    const gc = $('presetGroups'); gc.innerHTML = '';
+    groups.forEach(g => {
+      const d = document.createElement('div'); d.className = 'chip' + (g === PRESETS.group ? ' active' : ''); d.textContent = g;
+      d.addEventListener('click', () => { PRESETS.group = g; gc.querySelectorAll('.chip').forEach(x => x.classList.toggle('active', x === d)); renderPresets(); });
+      gc.appendChild(d);
+    });
+  }
+  renderPresets();
+}
+function renderPresets() {
+  const grid = $('presetGrid'); grid.innerHTML = '';
+  PRESETS.list.filter(p => p.group === PRESETS.group).forEach(p => {
+    const card = document.createElement('div'); card.className = 'pcard';
+    const img = document.createElement('img'); img.src = 'presets/' + p.file; img.alt = p.name; img.loading = 'lazy';
+    const name = document.createElement('div'); name.className = 'name'; name.textContent = p.name;
+    card.append(img, name);
+    card.addEventListener('click', async () => {
+      try {
+        const r = await fetch('presets/' + p.file); if (!r.ok) throw new Error(r.status);
+        const blob = await r.blob();
+        loadBlob(new File([blob], p.file, { type: 'image/png' }), 'preset');
+        $('presetModal').classList.remove('open');
+        toast(p.name + ' 도안을 넣었어요');
+      } catch (err) { toast('도안을 불러오지 못했어요. 다시 눌러 보세요'); }
+    });
+    grid.appendChild(card);
+  });
+  grid.scrollTop = 0;
 }
 
 // ===== 카메라 =====
