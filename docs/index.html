@@ -139,11 +139,8 @@
 
     <div class="card">
       <h2><span class="n">3</span>꾸미기 <span style="font-weight:500;color:var(--muted);font-size:14px">(안 해도 돼요)</span></h2>
-      <div style="font-weight:700;font-size:15px;color:var(--muted)">모양 스티커</div>
-      <div class="stkgrid" id="shapeTray" style="margin-top:6px"></div>
-      <div id="imgStickerWrap" style="display:none">
-        <div style="margin-top:12px;font-weight:700;font-size:15px;color:var(--muted)">그림 스티커</div>
-        <div class="stkgrid" id="imgTray" style="margin-top:6px"></div>
+      <div id="imgStickerWrap">
+        <div class="stkgrid" id="imgTray"><p class="hint" style="margin:0">스티커를 불러오는 중…</p></div>
       </div>
       <p class="hint">스티커는 4개까지 넣을 수 있어요. 미리보기에서 손가락으로 끌어 옮기고, 두 손가락으로 크기를 바꿔요.</p>
       <div class="stktools" id="stkTools" style="display:none">
@@ -293,7 +290,7 @@ const BORDERS = [
 // 테두리 종류별로 안쪽 내용이 시작하는 위치(px). 없으면 95.
 const BORDER_INNER = { none: 60, band_heart: 130, band_star: 130 };
 
-// 모양 스티커: 가운데가 (0,0)이고 한 변이 1인 상자 안에 검정으로 그린다. (fillStyle은 호출 쪽에서 #000)
+// 작은 모양(하트·별 등). 가운데가 (0,0)이고 한 변이 1인 상자 안에 검정으로 그린다. 테두리 띠에 쓰인다. (모양 스티커 UI는 2026-10-28 제거)
 const SHAPES = [
   { id: 'heart', name: '하트', draw: x => { x.beginPath(); x.moveTo(0, 0.46); x.bezierCurveTo(-0.66, 0.06, -0.44, -0.52, 0, -0.2); x.bezierCurveTo(0.44, -0.52, 0.66, 0.06, 0, 0.46); x.fill(); } },
   { id: 'star', name: '별', draw: x => { x.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.25 : 0.5, a = -Math.PI / 2 + i * Math.PI / 5; x.lineTo(r * Math.cos(a), r * Math.sin(a)); } x.closePath(); x.fill(); } },
@@ -852,27 +849,20 @@ function addSticker(st) {
   state.stickers.push(st); selectSticker(state.stickers.length - 1); render(); updateButtons();
 }
 (function initStickers() {
-  const tray = $('shapeTray');
-  SHAPES.forEach(sh => {
-    const d = document.createElement('div'); d.className = 'stk'; d.title = sh.name;
-    const c = document.createElement('canvas'); c.width = c.height = 96;
-    const x = c.getContext('2d'); x.translate(48, 48); x.scale(84, 84); x.fillStyle = '#000'; sh.draw(x);
-    d.appendChild(c); d.addEventListener('click', () => addSticker({ type: 'shape', id: sh.id, size: 150 })); tray.appendChild(d);
-  });
   $('stkSize').addEventListener('input', () => { const st = state.stickers[state.activeStk]; if (!st) return; st.size = +$('stkSize').value; $('stkSizeOut').textContent = (st.size / 40).toFixed(1) + 'mm'; render(); });
   $('btnStkFlip').addEventListener('click', () => { const st = state.stickers[state.activeStk]; if (st) { st.flip = !st.flip; render(); } });
   $('btnStkDel').addEventListener('click', () => { if (state.activeStk < 0) return; state.stickers.splice(state.activeStk, 1); selectSticker(-1); render(); updateButtons(); });
   $('btnStkClear').addEventListener('click', () => { state.stickers = []; selectSticker(-1); render(); updateButtons(); });
-  // 그림 스티커: docs/stickers/stickers.json 이 있을 때만 보인다.
+  // 스티커 목록: docs/stickers/stickers.json
   fetch('stickers/stickers.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : []).then(list => {
-    if (!Array.isArray(list) || !list.length) return;
-    $('imgStickerWrap').style.display = 'block'; const it = $('imgTray');
+    const it = $('imgTray'); it.innerHTML = '';
+    if (!Array.isArray(list) || !list.length) { it.innerHTML = '<p class="hint" style="margin:0">스티커를 불러오지 못했어요. 새로고침해 보세요.</p>'; return; }
     list.forEach(p => {
       const d = document.createElement('div'); d.className = 'stk' + (p.wide ? ' wide' : ''); d.title = p.name;
       const im = new Image(); im.src = 'stickers/' + p.file; im.alt = p.name; d.appendChild(im);
       d.addEventListener('click', () => addSticker({ type: 'img', id: p.file, img: im, size: p.wide ? 130 : 160 })); it.appendChild(d);
     });
-  }).catch(() => {});
+  }).catch(() => { $('imgTray').innerHTML = '<p class="hint" style="margin:0">스티커를 불러오지 못했어요. 새로고침해 보세요.</p>'; });
 })();
 
 function drawCurvedText(ctx, text, pos, o) {
