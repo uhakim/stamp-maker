@@ -62,5 +62,55 @@
  {
   "file": "s15_gift.png",
   "name": "선물"
+ },
+ {
+  "file": "t00_love.png",
+  "name": "사랑해",
+  "wide": true
+ },
+ {
+  "file": "t01_best.png",
+  "name": "최고야",
+  "wide": true
+ },
+ {
+  "file": "t02_welldone.png",
+  "name": "참 잘했어요",
+  "wide": true
+ },
+ {
+  "file": "t03_fighting.png",
+  "name": "파이팅",
+  "wide": true
+ },
+ {
+  "file": "t04_thanks.png",
+  "name": "고마워",
+  "wide": true
+ },
+ {
+  "file": "t05_cool.png",
+  "name": "멋져요",
+  "wide": true
+ },
+ {
+  "file": "t06_happy.png",
+  "name": "행복해",
+  "wide": true
+ },
+ {
+  "file": "t07_cheer.png",
+  "name": "응원해",
+  "wide": true
+ },
+ {
+  "file": "t08_cando.png",
+  "name": "할수있어",
+  "wide": true
+ },
+ {
+  "file": "t09_congrats.png",
+  "name": "축하해",
+  "wide": true
  }
 ]
