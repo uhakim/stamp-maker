@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>내 도장 도안 만들기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Gugi&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ea; --card: #ffffff; --ink: #1d1b16; --muted: #6b665c; --line: #e2ddd2;
+    --accent: #c8102e; --accent-ink: #ffffff; --ok: #1f7a3d; --warn: #b7791f; --soft: #faf7f1;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Noto Sans KR', system-ui, sans-serif; font-size: 17px; }
+  body { touch-action: manipulation; }
+  header { padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 22px; margin: 0; font-weight: 900; letter-spacing: -0.5px; }
+  header .cls { margin-left: auto; font-weight: 700; color: var(--muted); }
+  main { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 0 16px 120px; max-width: 1400px; margin: 0 auto; }
+  @media (min-width: 960px) {
+    main { grid-template-columns: minmax(0, 1fr) 480px; align-items: start; }
+    #previewPane { position: sticky; top: 12px; }
+  }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 14px; }
+  .card h2 { font-size: 18px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
+  .card h2 .n { display: inline-flex; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff; align-items: center; justify-content: center; font-size: 15px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 15px; color: var(--muted); }
+  input[type=text], select { font: inherit; font-size: 20px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px; background: #fff; min-height: 52px; }
+  input[type=text]:focus, select:focus { outline: none; border-color: var(--ink); }
+  .btn { font: inherit; font-weight: 700; font-size: 17px; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--ink); background: #fff; color: var(--ink); cursor: pointer; min-height: 52px; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+  .btn.big { flex: 1 1 140px; min-height: 76px; font-size: 18px; flex-direction: column; gap: 4px; }
+  .btn.big small { font-weight: 500; font-size: 13px; color: var(--muted); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: var(--line); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.active { background: var(--ink); color: #fff; }
+  .hint { color: var(--muted); font-size: 14px; margin: 8px 0 0; line-height: 1.5; }
+  .slider { display: grid; grid-template-columns: 110px 1fr 48px; align-items: center; gap: 10px; margin: 10px 0; font-weight: 700; font-size: 15px; }
+  .slider output { text-align: right; color: var(--muted); font-weight: 500; }
+  input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { border: 2px solid var(--line); border-radius: 12px; padding: 8px 14px; cursor: pointer; background: #fff; font-size: 16px; min-height: 48px; display: inline-flex; align-items: center; gap: 8px; }
+  .chip.active { border-color: var(--ink); background: var(--ink); color: #fff; }
+  .fontcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .fontcard { border: 2px solid var(--line); border-radius: 12px; padding: 10px 8px 6px; text-align: center; cursor: pointer; background: #fff; }
+  .fontcard.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+  .fontcard .sample { font-size: 28px; line-height: 1.2; white-space: nowrap; overflow: hidden; }
+  .fontcard .name { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .borders { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .bcard { border: 2px solid var(--line); border-radius: 12px; padding: 10px; cursor: pointer; background: #fff; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 14px; }
+  .bcard.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+  .bcard svg { width: 56px; height: 56px; }
+  #previewWrap { position: relative; width: 100%; aspect-ratio: 1; background: #fff; border-radius: 14px; border: 1px solid var(--line); overflow: hidden; touch-action: none; }
+  #preview { width: 100%; height: 100%; display: block; }
+  #previewWrap.actual { width: 25mm; height: 25mm; margin: 12px auto; border-radius: 0; }
+  #previewWrap .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); text-align: center; padding: 20px; font-size: 15px; pointer-events: none; }
+  .status { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-size: 15px; display: none; }
+  .status.ok { display: block; background: #e8f5ec; color: var(--ok); }
+  .status.warn { display: block; background: #fff6e0; color: var(--warn); }
+  .status.err { display: block; background: #fdebec; color: var(--accent); }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.72); display: none; align-items: center; justify-content: center; z-index: 50; padding: 12px; }
+  .modal.open { display: flex; }
+  .modal .box { background: #fff; border-radius: 16px; padding: 14px; max-width: 96vw; max-height: 96vh; display: flex; flex-direction: column; gap: 10px; }
+  .modal video, .modal canvas { max-width: 90vw; max-height: 70vh; background: #000; border-radius: 10px; touch-action: none; }
+  .modal .row { justify-content: center; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 15px; display: none; z-index: 60; max-width: 90vw; }
+  .imgtools { display: none; margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
+  .imgtools.show { display: block; }
+  .srcthumb { width: 64px; height: 64px; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .kbd { font-family: ui-monospace, monospace; background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>내 도장 도안 만들기</h1>
+  <span class="cls" id="clsLabel"></span>
+</header>
+
+<main>
+  <section id="controls">
+    <div class="card">
+      <h2><span class="n">1</span>누구의 도장인가요?</h2>
+      <div class="row">
+        <label class="f">번호
+          <select id="num"></select>
+        </label>
+        <label class="f" style="flex:1">이름
+          <input type="text" id="name" maxlength="10" placeholder="이름을 적어요" autocomplete="off">
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">2</span>가운데에 들어갈 그림</h2>
+      <div class="row">
+        <button class="btn big" id="btnFile">📁 그림 파일<small>저장된 그림 고르기</small></button>
+        <button class="btn big" id="btnCam">📷 사진 찍기<small>종이에 그린 그림 찍기</small></button>
+        <button class="btn big" id="btnPaste">📋 붙여넣기<small>캡처한 그림 넣기</small></button>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" hidden>
+      <input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+      <p class="hint">AI나 인터넷에서 찾은 그림은 화면을 캡처한 뒤(<span class="kbd">Win</span>+<span class="kbd">Shift</span>+<span class="kbd">S</span>) 이 페이지에서 <span class="kbd">Ctrl</span>+<span class="kbd">V</span>를 누르거나 붙여넣기 버튼을 눌러요.<br>그림은 자동으로 검정 한 가지 색으로 바뀌어요. 큰 그림 하나가 작은 그림 여러 개보다 좋아요.</p>
+
+      <div class="imgtools" id="imgTools">
+        <div class="row" style="margin-bottom:6px">
+          <img id="srcThumb" class="srcthumb" alt="">
+          <button class="btn ghost" id="btnCrop">✂️ 필요한 부분만 자르기</button>
+          <button class="btn ghost" id="btnInvert">⬛ 흑백 뒤집기</button>
+          <button class="btn ghost" id="btnPhotoFix">☀️ 사진 밝기 보정</button>
+        </div>
+        <div class="slider"><span>진하기</span><input type="range" id="thr" min="-80" max="80" value="0"><output id="thrOut">0</output></div>
+        <div class="slider"><span>선 굵게</span><input type="range" id="thick" min="0" max="4" value="0"><output id="thickOut">0</output></div>
+        <div class="slider"><span>그림 크기</span><input type="range" id="scale" min="30" max="140" value="100"><output id="scaleOut">100%</output></div>
+        <p class="hint">미리보기에서 그림을 손가락으로 끌어 자리를 옮길 수 있어요. 가는 선은 "선 굵게"를 올려요.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">3</span>글자 넣기</h2>
+      <div class="row">
+        <label class="f" style="flex:1">위쪽 글자 (8자까지)
+          <input type="text" id="topText" maxlength="8" placeholder="예: 4학년 3반" autocomplete="off">
+        </label>
+        <label class="f" style="flex:1">아래쪽 글자 (8자까지)
+          <input type="text" id="bottomText" maxlength="8" placeholder="예: 내 이름, 참 잘했어요" autocomplete="off">
+        </label>
+      </div>
+      <p class="hint">비워 두어도 돼요. 글자가 없으면 그림이 더 커져요.</p>
+      <div class="fontcards" id="fontCards" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">4</span>테두리</h2>
+      <div class="borders" id="borderCards"></div>
+    </div>
+  </section>
+
+  <aside id="previewPane">
+    <div class="card">
+      <h2><span class="n">5</span>완성 모습</h2>
+      <div id="previewWrap">
+        <canvas id="preview" width="1000" height="1000"></canvas>
+        <div class="empty" id="previewEmpty">그림을 넣으면 여기에 도장 모양이 나타나요</div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="btnActual">📏 실제 크기로 보기</button>
+        <button class="btn ghost" id="btnSim">🖨️ 찍힌 모습 보기</button>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn primary" id="btnSend" style="flex:2" disabled>📤 선생님께 보내기</button>
+        <button class="btn" id="btnDownload" style="flex:1" disabled>⬇️ 내려받기</button>
+      </div>
+      <p class="hint" id="sendHint">번호, 이름, 그림이 모두 있어야 보낼 수 있어요.</p>
+    </div>
+  </aside>
+</main>
+
+<!-- 카메라 -->
+<div class="modal" id="camModal">
+  <div class="box">
+    <video id="camVideo" autoplay playsinline muted></video>
+    <div class="row">
+      <button class="btn primary" id="camShot">📸 촬영</button>
+      <button class="btn ghost" id="camFlip">🔄 카메라 전환</button>
+      <button class="btn ghost" id="camClose">닫기</button>
+    </div>
+    <p class="hint" style="text-align:center">그림이 화면에 꽉 차게, 그림자가 지지 않게 찍어요.</p>
+  </div>
+</div>
+
+<!-- 자르기 -->
+<div class="modal" id="cropModal">
+  <div class="box">
+    <canvas id="cropCanvas"></canvas>
+    <p class="hint" style="text-align:center;margin:0">남길 부분을 손가락으로 네모나게 그어요.</p>
+    <div class="row">
+      <button class="btn primary" id="cropOk">✅ 이대로 자르기</button>
+      <button class="btn ghost" id="cropAll">전체 사용</button>
+      <button class="btn ghost" id="cropCancel">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 찍힌 모습 -->
+<div class="modal" id="simModal">
+  <div class="box" style="align-items:center">
+    <canvas id="simCanvas" width="236" height="236" style="width:min(80vw,480px);height:auto;image-rendering:pixelated;background:#fff"></canvas>
+    <p class="hint" style="text-align:center;margin:0" id="simHint">실제로 찍으면 가는 선은 이렇게 사라질 수 있어요.</p>
+    <button class="btn ghost" id="simClose">닫기</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ===== 설정 =====
+const CONFIG = {
+  GAS_URL: '',            // 구글 앱스 스크립트 웹앱 URL (배포 후 입력)
+  CLASS: '4-3',           // 기본 학급. 주소에 ?cls=4-3 을 붙이면 그 값이 우선
+  MAX_NUM: 30,
+  SIZE: 1000,             // 출력 PNG 한 변 (px). 25mm 기준 40px/mm
+};
+const params = new URLSearchParams(location.search);
+const CLS = (params.get('cls') || CONFIG.CLASS).trim();
+if (params.get('gas')) CONFIG.GAS_URL = params.get('gas');
+document.getElementById('clsLabel').textContent = CLS + ' 학급';
+
+const FONTS = [
+  { id: 'blackhan', name: '굵은 고딕', css: "'Black Han Sans'", weight: 400 },
+  { id: 'dohyeon',  name: '또렷 고딕', css: "'Do Hyeon'", weight: 400 },
+  { id: 'jua',      name: '둥근 글씨', css: "'Jua'", weight: 400 },
+  { id: 'gugi',     name: '멋글씨',   css: "'Gugi'", weight: 400 },
+  { id: 'noto',     name: '기본 굵게', css: "'Noto Sans KR'", weight: 900 },
+];
+const BORDERS = [
+  { id: 'single', name: '한 줄' },
+  { id: 'double', name: '두 줄' },
+  { id: 'round',  name: '둥근 모서리' },
+  { id: 'none',   name: '없음' },
+];
+
+// ===== 상태 =====
+const state = {
+  src: null,        // 원본 이미지 (HTMLImageElement 또는 canvas)
+  crop: null,       // {x,y,w,h} 원본 좌표
+  invert: false,
+  photoFix: false,
+  thr: 0, thick: 0,
+  scale: 1, dx: 0, dy: 0,
+  processed: null,  // 검정만 남긴 투명 캔버스
+  font: localStorage.getItem('stamp.font') || 'blackhan',
+  border: localStorage.getItem('stamp.border') || 'single',
+};
+
+const $ = id => document.getElementById(id);
+const preview = $('preview'), pctx = preview.getContext('2d');
+
+// ===== 입력 UI 구성 =====
+(function initInputs() {
+  const sel = $('num');
+  sel.innerHTML = '<option value="">번호</option>' + Array.from({ length: CONFIG.MAX_NUM }, (_, i) => `<option value="${i + 1}">${i + 1}번</option>`).join('');
+  sel.value = localStorage.getItem('stamp.num') || '';
+  $('name').value = localStorage.getItem('stamp.name') || '';
+  sel.addEventListener('change', () => { localStorage.setItem('stamp.num', sel.value); updateButtons(); });
+  $('name').addEventListener('input', () => { localStorage.setItem('stamp.name', $('name').value); updateButtons(); });
+
+  const fc = $('fontCards');
+  FONTS.forEach(f => {
+    const d = document.createElement('div');
+    d.className = 'fontcard' + (f.id === state.font ? ' active' : '');
+    d.innerHTML = `<div class="sample" style="font-family:${f.css};font-weight:${f.weight}">참 잘했어요</div><div class="name">${f.name}</div>`;
+    d.addEventListener('click', () => { state.font = f.id; localStorage.setItem('stamp.font', f.id); fc.querySelectorAll('.fontcard').forEach(x => x.classList.toggle('active', x === d)); render(); });
+    fc.appendChild(d);
+  });
+
+  const bc = $('borderCards');
+  const icons = {
+    single: '<rect x="6" y="6" width="44" height="44" fill="none" stroke="#000" stroke-width="5"/>',
+    double: '<rect x="4" y="4" width="48" height="48" fill="none" stroke="#000" stroke-width="4"/><rect x="12" y="12" width="32" height="32" fill="none" stroke="#000" stroke-width="2.5"/>',
+    round:  '<rect x="6" y="6" width="44" height="44" rx="10" fill="none" stroke="#000" stroke-width="5"/>',
+    none:   '<rect x="6" y="6" width="44" height="44" fill="none" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 4"/>',
+  };
+  BORDERS.forEach(b => {
+    const d = document.createElement('div');
+    d.className = 'bcard' + (b.id === state.border ? ' active' : '');
+    d.innerHTML = `<svg viewBox="0 0 56 56">${icons[b.id]}</svg><span>${b.name}</span>`;
+    d.addEventListener('click', () => { state.border = b.id; localStorage.setItem('stamp.border', b.id); bc.querySelectorAll('.bcard').forEach(x => x.classList.toggle('active', x === d)); render(); });
+    bc.appendChild(d);
+  });
+
+  ['topText', 'bottomText'].forEach(id => $(id).addEventListener('input', render));
+  $('thr').addEventListener('input', e => { state.thr = +e.target.value; $('thrOut').textContent = e.target.value; reprocess(); });
+  $('thick').addEventListener('input', e => { state.thick = +e.target.value; $('thickOut').textContent = e.target.value; reprocess(); });
+  $('scale').addEventListener('input', e => { state.scale = e.target.value / 100; $('scaleOut').textContent = e.target.value + '%'; render(); });
+  $('btnInvert').addEventListener('click', () => { state.invert = !state.invert; $('btnInvert').classList.toggle('active', state.invert); reprocess(); });
+  $('btnPhotoFix').addEventListener('click', () => { state.photoFix = !state.photoFix; $('btnPhotoFix').classList.toggle('active', state.photoFix); reprocess(); });
+})();
+
+function toast(msg, ms = 2600) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms); }
+function setStatus(kind, msg) { const s = $('status'); s.className = 'status' + (kind ? ' ' + kind : ''); s.textContent = msg || ''; }
+
+// ===== 이미지 불러오기 =====
+$('btnFile').addEventListener('click', () => $('fileInput').click());
+$('fileInput').addEventListener('change', e => { if (e.target.files[0]) loadBlob(e.target.files[0], 'file'); e.target.value = ''; });
+$('camInput').addEventListener('change', e => { if (e.target.files[0]) loadBlob(e.target.files[0], 'photo'); e.target.value = ''; });
+
+document.addEventListener('paste', e => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (const it of items) if (it.type.startsWith('image/')) { e.preventDefault(); loadBlob(it.getAsFile(), 'paste'); toast('붙여넣은 그림을 넣었어요'); return; }
+});
+$('btnPaste').addEventListener('click', async () => {
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.read) throw new Error('unsupported');
+    const items = await navigator.clipboard.read();
+    for (const it of items) {
+      const type = it.types.find(t => t.startsWith('image/'));
+      if (type) { loadBlob(await it.getType(type), 'paste'); toast('붙여넣은 그림을 넣었어요'); return; }
+    }
+    toast('클립보드에 그림이 없어요. 먼저 화면을 캡처하세요 (Win+Shift+S)');
+  } catch (err) {
+    toast('이 페이지를 한 번 누른 뒤 Ctrl+V 를 눌러 붙여넣어요', 4000);
+  }
+});
+
+// 드래그 앤 드롭
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) loadBlob(f, 'file'); });
+
+function loadBlob(blob, kind) {
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    // 작업용으로 1400px 이하로 줄여서 흰 배경 위에 그림 (투명 배경 제거)
+    const maxSide = 1400, r = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * r)); c.height = Math.max(1, Math.round(img.naturalHeight * r));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+    state.src = c; state.crop = null; state.dx = 0; state.dy = 0; state.scale = 1; $('scale').value = 100; $('scaleOut').textContent = '100%';
+    state.invert = false; $('btnInvert').classList.remove('active');
+    const isPhoto = kind === 'photo' || /jpe?g|heic|heif/i.test(blob.type) || (blob.name && /\.jpe?g$/i.test(blob.name));
+    state.photoFix = isPhoto; $('btnPhotoFix').classList.toggle('active', isPhoto);
+    state.thr = 0; $('thr').value = 0; $('thrOut').textContent = '0';
+    state.thick = isPhoto ? 1 : 0; $('thick').value = state.thick; $('thickOut').textContent = state.thick;
+    $('srcThumb').src = c.toDataURL('image/jpeg', 0.6);
+    $('imgTools').classList.add('show');
+    reprocess();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('그림을 읽지 못했어요. 다른 파일을 골라 보세요'); };
+  img.src = url;
+}
+
+// ===== 카메라 =====
+let camStream = null, camFacing = 'environment';
+$('btnCam').addEventListener('click', openCamera);
+$('camClose').addEventListener('click', closeCamera);
+$('camFlip').addEventListener('click', () => { camFacing = camFacing === 'environment' ? 'user' : 'environment'; openCamera(); });
+$('camShot').addEventListener('click', () => {
+  const v = $('camVideo'); if (!v.videoWidth) return;
+  const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0);
+  c.toBlob(b => { closeCamera(); loadBlob(b, 'photo'); }, 'image/jpeg', 0.92);
+});
+async function openCamera() {
+  stopCam();
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    $('camVideo').srcObject = camStream;
+    $('camModal').classList.add('open');
+  } catch (err) {
+    // 카메라를 열 수 없으면 기기 기본 카메라/파일 선택으로 대체
+    $('camInput').click();
+  }
+}
+function stopCam() { if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; } }
+function closeCamera() { stopCam(); $('camModal').classList.remove('open'); }
+
+// ===== 자르기 =====
+let cropDrag = null, cropRect = null, cropScale = 1;
+$('btnCrop').addEventListener('click', () => {
+  if (!state.src) return;
+  const cc = $('cropCanvas'), s = state.src;
+  const maxW = Math.min(window.innerWidth * 0.9, 900), maxH = window.innerHeight * 0.68;
+  cropScale = Math.min(maxW / s.width, maxH / s.height, 1);
+  cc.width = Math.round(s.width * cropScale); cc.height = Math.round(s.height * cropScale);
+  cropRect = state.crop ? { x: state.crop.x * cropScale, y: state.crop.y * cropScale, w: state.crop.w * cropScale, h: state.crop.h * cropScale } : null;
+  drawCrop(); $('cropModal').classList.add('open');
+});
+function drawCrop() {
+  const cc = $('cropCanvas'), x = cc.getContext('2d');
+  x.clearRect(0, 0, cc.width, cc.height); x.drawImage(state.src, 0, 0, cc.width, cc.height);
+  if (cropRect) {
+    x.fillStyle = 'rgba(0,0,0,.45)'; x.fillRect(0, 0, cc.width, cc.height);
+    x.clearRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+    x.drawImage(state.src, cropRect.x / cropScale, cropRect.y / cropScale, cropRect.w / cropScale, cropRect.h / cropScale, cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+    x.strokeStyle = '#c8102e'; x.lineWidth = 3; x.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+  }
+}
+(function cropEvents() {
+  const cc = $('cropCanvas');
+  const pos = e => { const r = cc.getBoundingClientRect(); return { x: (e.clientX - r.left) * cc.width / r.width, y: (e.clientY - r.top) * cc.height / r.height }; };
+  cc.addEventListener('pointerdown', e => { cc.setPointerCapture(e.pointerId); cropDrag = pos(e); cropRect = null; drawCrop(); });
+  cc.addEventListener('pointermove', e => {
+    if (!cropDrag) return; const p = pos(e);
+    cropRect = { x: Math.min(cropDrag.x, p.x), y: Math.min(cropDrag.y, p.y), w: Math.abs(p.x - cropDrag.x), h: Math.abs(p.y - cropDrag.y) };
+    drawCrop();
+  });
+  const up = () => { cropDrag = null; };
+  cc.addEventListener('pointerup', up); cc.addEventListener('pointercancel', up);
+  $('cropOk').addEventListener('click', () => {
+    if (cropRect && cropRect.w > 10 && cropRect.h > 10) {
+      state.crop = { x: Math.round(cropRect.x / cropScale), y: Math.round(cropRect.y / cropScale), w: Math.round(cropRect.w / cropScale), h: Math.round(cropRect.h / cropScale) };
+    }
+    $('cropModal').classList.remove('open'); state.dx = 0; state.dy = 0; reprocess();
+  });
+  $('cropAll').addEventListener('click', () => { state.crop = null; $('cropModal').classList.remove('open'); state.dx = 0; state.dy = 0; reprocess(); });
+  $('cropCancel').addEventListener('click', () => $('cropModal').classList.remove('open'));
+})();
+
+// ===== 흑백 처리 =====
+function reprocess() {
+  if (!state.src) return;
+  const s = state.src, cr = state.crop || { x: 0, y: 0, w: s.width, h: s.height };
+  const W = cr.w, H = cr.h;
+  const work = document.createElement('canvas'); work.width = W; work.height = H;
+  const wx = work.getContext('2d'); wx.drawImage(s, cr.x, cr.y, W, H, 0, 0, W, H);
+  const id = wx.getImageData(0, 0, W, H), d = id.data, n = W * H;
+  const gray = new Float32Array(n);
+  for (let i = 0; i < n; i++) gray[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+
+  if (state.photoFix) normalizeBackground(gray, W, H);
+  if (state.invert) for (let i = 0; i < n; i++) gray[i] = 255 - gray[i];
+
+  const T = Math.min(250, Math.max(5, otsu(gray) + state.thr));
+  let bin = new Uint8Array(n);
+  for (let i = 0; i < n; i++) bin[i] = gray[i] < T ? 1 : 0;
+  // 작은 점 잡음 제거 (사진일 때)
+  if (state.photoFix) bin = despeckle(bin, W, H);
+  for (let k = 0; k < state.thick; k++) bin = dilate(bin, W, H);
+
+  // 내용이 있는 범위로 자르기
+  const bb = bbox(bin, W, H);
+  if (!bb) { state.processed = null; render(); setStatus('warn', '검정 부분이 없어요. 진하기를 올리거나 흑백 뒤집기를 눌러 보세요.'); return; }
+  const out = document.createElement('canvas'); out.width = bb.w; out.height = bb.h;
+  const od = out.getContext('2d').createImageData(bb.w, bb.h), o = od.data;
+  for (let y = 0; y < bb.h; y++) for (let x = 0; x < bb.w; x++) {
+    if (bin[(y + bb.y) * W + (x + bb.x)]) { const j = (y * bb.w + x) * 4; o[j] = o[j + 1] = o[j + 2] = 0; o[j + 3] = 255; }
+  }
+  out.getContext('2d').putImageData(od, 0, 0);
+  state.processed = out;
+  setStatus('', '');
+  render();
+}
+
+function normalizeBackground(gray, W, H) {
+  // 블록별 밝은 값(종이 밝기)을 추정해 나누기 → 그림자·조명 차이 제거
+  const B = Math.max(8, Math.round(Math.max(W, H) / 16));
+  const bw = Math.ceil(W / B), bh = Math.ceil(H / B);
+  const bg = new Float32Array(bw * bh);
+  for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+    // 블록 안 밝기 상위 10% 지점
+    const hist = new Uint32Array(256); let cnt = 0;
+    for (let y = by * B; y < Math.min(H, by * B + B); y++) for (let x = bx * B; x < Math.min(W, bx * B + B); x++) { hist[gray[y * W + x] | 0]++; cnt++; }
+    let acc = 0, v = 255; for (v = 255; v > 0; v--) { acc += hist[v]; if (acc >= cnt * 0.1) break; }
+    bg[by * bw + bx] = v;
+  }
+  // 전체 종이 밝기(상위 5%)의 절반 아래로는 내려가지 않게 → 넓은 검정 칠이 날아가는 것 방지
+  const all = Array.from(bg).sort((a, b) => b - a); const paper = all[Math.floor(all.length * 0.05)] || 255;
+  const floor = paper * 0.55;
+  for (let i = 0; i < bg.length; i++) bg[i] = Math.max(bg[i], floor, 1);
+  // 3x3 평균으로 부드럽게
+  const sm = new Float32Array(bg.length);
+  for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+    let s = 0, c = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = by + dy, xx = bx + dx; if (yy >= 0 && yy < bh && xx >= 0 && xx < bw) { s += bg[yy * bw + xx]; c++; } }
+    sm[by * bw + bx] = s / c;
+  }
+  for (let y = 0; y < H; y++) {
+    const fy = Math.min(bh - 1, Math.max(0, (y + 0.5) / B - 0.5)), y0 = Math.floor(fy), y1 = Math.min(bh - 1, y0 + 1), ty = fy - y0;
+    for (let x = 0; x < W; x++) {
+      const fx = Math.min(bw - 1, Math.max(0, (x + 0.5) / B - 0.5)), x0 = Math.floor(fx), x1 = Math.min(bw - 1, x0 + 1), tx = fx - x0;
+      const b = (sm[y0 * bw + x0] * (1 - tx) + sm[y0 * bw + x1] * tx) * (1 - ty) + (sm[y1 * bw + x0] * (1 - tx) + sm[y1 * bw + x1] * tx) * ty;
+      gray[y * W + x] = Math.min(255, gray[y * W + x] * 255 / b);
+    }
+  }
+}
+
+function otsu(gray) {
+  const hist = new Float64Array(256); const n = gray.length;
+  for (let i = 0; i < n; i++) hist[gray[i] | 0]++;
+  let sum = 0; for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sumB = 0, wB = 0, best = 0, thr = 128;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t]; if (!wB) continue; const wF = n - wB; if (!wF) break;
+    sumB += t * hist[t]; const mB = sumB / wB, mF = (sum - sumB) / wF; const v = wB * wF * (mB - mF) ** 2;
+    if (v > best) { best = v; thr = t; }
+  }
+  return thr;
+}
+function dilate(bin, W, H) {
+  const out = new Uint8Array(bin.length);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x; if (bin[i]) { out[i] = 1; continue; }
+    if ((x > 0 && bin[i - 1]) || (x < W - 1 && bin[i + 1]) || (y > 0 && bin[i - W]) || (y < H - 1 && bin[i + W])) out[i] = 1;
+  }
+  return out;
+}
+function despeckle(bin, W, H) {
+  // 아주 작은 덩어리(면적 < 전체의 0.002%)는 지움
+  const minArea = Math.max(4, Math.round(W * H * 0.00002));
+  const seen = new Uint8Array(bin.length), out = bin.slice(); const stack = [];
+  for (let i = 0; i < bin.length; i++) {
+    if (!bin[i] || seen[i]) continue;
+    const comp = []; stack.push(i); seen[i] = 1;
+    while (stack.length) {
+      const p = stack.pop(); comp.push(p); const x = p % W, y = (p / W) | 0;
+      const nb = [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, y > 0 ? p - W : -1, y < H - 1 ? p + W : -1];
+      for (const q of nb) if (q >= 0 && bin[q] && !seen[q]) { seen[q] = 1; stack.push(q); }
+    }
+    if (comp.length < minArea) for (const p of comp) out[p] = 0;
+  }
+  return out;
+}
+function bbox(bin, W, H) {
+  const rows = new Uint32Array(H), cols = new Uint32Array(W);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (bin[y * W + x]) { rows[y]++; cols[x]++; }
+  const rmin = Math.max(2, W * 0.002), cmin = Math.max(2, H * 0.002);
+  let y0 = 0, y1 = H - 1, x0 = 0, x1 = W - 1;
+  while (y0 < H && rows[y0] < rmin) y0++; while (y1 > y0 && rows[y1] < rmin) y1--;
+  while (x0 < W && cols[x0] < cmin) x0++; while (x1 > x0 && cols[x1] < cmin) x1--;
+  if (y0 >= y1 || x0 >= x1) return null;
+  return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+
+// ===== 도안 그리기 =====
+function layout() {
+  const S = CONFIG.SIZE, top = $('topText').value.trim(), bottom = $('bottomText').value.trim();
+  const hasBorder = state.border !== 'none';
+  const inner = hasBorder ? 95 : 60;                // 테두리 안쪽 시작 위치
+  const band = 170;                                  // 글자 띠 높이
+  const imgTop = top ? inner + band : inner, imgBottom = bottom ? S - inner - band : S - inner;
+  return { S, top, bottom, inner, band, img: { x: inner, y: imgTop, w: S - inner * 2, h: imgBottom - imgTop } };
+}
+
+function drawStamp(ctx, forExport) {
+  const L = layout(), S = L.S;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, S, S);
+  ctx.fillStyle = '#000'; ctx.strokeStyle = '#000'; ctx.lineJoin = 'miter';
+
+  // 테두리 (선 굵기 20px = 0.5mm)
+  if (state.border === 'single') { ctx.lineWidth = 20; ctx.strokeRect(40, 40, S - 80, S - 80); }
+  else if (state.border === 'double') { ctx.lineWidth = 20; ctx.strokeRect(40, 40, S - 80, S - 80); ctx.lineWidth = 10; ctx.strokeRect(80, 80, S - 160, S - 160); }
+  else if (state.border === 'round') { ctx.lineWidth = 20; roundRect(ctx, 40, 40, S - 80, S - 80, 90); ctx.stroke(); }
+
+  // 글자
+  const f = FONTS.find(x => x.id === state.font) || FONTS[0];
+  const maxW = S - L.inner * 2 - 20;
+  const drawText = (text, cy) => {
+    if (!text) return true;
+    let size = 130, ok = true;
+    for (; size >= 60; size -= 4) { ctx.font = `${f.weight} ${size}px ${f.css}`; if (ctx.measureText(text).width <= maxW) break; }
+    if (size < 60) { size = 60; ok = false; }
+    ctx.font = `${f.weight} ${size}px ${f.css}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, S / 2, cy, maxW);
+    return ok;
+  };
+  const okTop = drawText(L.top, L.inner + L.band / 2 - 4);
+  const okBottom = drawText(L.bottom, S - L.inner - L.band / 2 + 4);
+
+  // 그림
+  if (state.processed) {
+    const p = state.processed, R = L.img;
+    const fit = Math.min(R.w / p.width, R.h / p.height) * 0.94 * state.scale;
+    const w = p.width * fit, h = p.height * fit;
+    const x = R.x + (R.w - w) / 2 + state.dx, y = R.y + (R.h - h) / 2 + state.dy;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(p, x, y, w, h);
+  }
+  if (forExport) {
+    // 안티앨리어싱 회색 제거 → 완전한 흑백
+    const id = ctx.getImageData(0, 0, S, S), d = id.data;
+    for (let i = 0; i < d.length; i += 4) { const v = (d[i] + d[i + 1] + d[i + 2]) / 3 < 150 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+    ctx.putImageData(id, 0, 0);
+  }
+  return { okTop, okBottom };
+}
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+let renderQueued = false;
+function render() {
+  if (renderQueued) return; renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    const r = drawStamp(pctx, false);
+    $('previewEmpty').style.display = state.processed ? 'none' : 'flex';
+    if (!r.okTop || !r.okBottom) setStatus('warn', '글자가 너무 길어서 작아졌어요. 글자 수를 줄이면 더 잘 찍혀요.');
+    else if ($('status').classList.contains('warn') && $('status').textContent.includes('글자')) setStatus('', '');
+    updateButtons();
+  });
+}
+document.fonts.ready.then(render);
+FONTS.forEach(f => document.fonts.load(`${f.weight} 40px ${f.css}`, '참 잘했어요').then(render).catch(() => {}));
+
+// 미리보기 위에서 끌기 / 두 손가락 크기 조절
+(function dragEvents() {
+  const pts = new Map(); let last = null, pinch0 = null, scale0 = 1;
+  const toCanvas = e => { const r = preview.getBoundingClientRect(); return { x: (e.clientX - r.left) * CONFIG.SIZE / r.width, y: (e.clientY - r.top) * CONFIG.SIZE / r.height }; };
+  preview.addEventListener('pointerdown', e => {
+    if (!state.processed) return; preview.setPointerCapture(e.pointerId); pts.set(e.pointerId, toCanvas(e));
+    if (pts.size === 1) last = toCanvas(e);
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); scale0 = state.scale; }
+  });
+  preview.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, toCanvas(e));
+    if (pts.size === 1 && last) { const p = toCanvas(e); state.dx += p.x - last.x; state.dy += p.y - last.y; last = p; render(); }
+    else if (pts.size === 2 && pinch0) {
+      const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y);
+      state.scale = Math.min(1.4, Math.max(0.3, scale0 * d / pinch0));
+      $('scale').value = Math.round(state.scale * 100); $('scaleOut').textContent = Math.round(state.scale * 100) + '%'; render();
+    }
+  });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch0 = null; if (pts.size === 0) last = null; else last = [...pts.values()][0]; };
+  preview.addEventListener('pointerup', up); preview.addEventListener('pointercancel', up);
+})();
+
+// ===== 실제 크기 / 찍힌 모습 =====
+$('btnActual').addEventListener('click', () => { const w = $('previewWrap'); w.classList.toggle('actual'); $('btnActual').classList.toggle('active', w.classList.contains('actual')); });
+$('btnSim').addEventListener('click', () => {
+  const S = CONFIG.SIZE, ex = document.createElement('canvas'); ex.width = S; ex.height = S;
+  drawStamp(ex.getContext('2d'), true);
+  const sim = $('simCanvas'), sx = sim.getContext('2d'), n = sim.width; // 236px ≈ 25mm @ 240dpi
+  sx.imageSmoothingEnabled = true; sx.imageSmoothingQuality = 'high';
+  sx.fillStyle = '#fff'; sx.fillRect(0, 0, n, n); sx.drawImage(ex, 0, 0, n, n);
+  const id = sx.getImageData(0, 0, n, n), d = id.data; let black = 0;
+  for (let i = 0; i < d.length; i += 4) { const v = d[i] < 170 ? 0 : 255; if (!v) black++; d[i] = d[i + 1] = d[i + 2] = v; }
+  sx.putImageData(id, 0, 0);
+  // 원본 검정 비율과 비교해 가는 선 손실 경고
+  const oid = ex.getContext('2d').getImageData(0, 0, S, S).data; let ob = 0; for (let i = 0; i < oid.length; i += 4) if (!oid[i]) ob++;
+  const ratio = (black / (n * n)) / Math.max(1e-6, ob / (S * S));
+  $('simHint').textContent = ratio < 0.75 ? '가는 선이 많이 사라져요. "선 굵게"를 올리거나 그림을 더 단순하게 해 보세요.' : '이 정도면 잘 찍혀요.';
+  $('simModal').classList.add('open');
+});
+$('simClose').addEventListener('click', () => $('simModal').classList.remove('open'));
+
+// ===== 내려받기 / 보내기 =====
+function ready() { return !!(state.processed && $('num').value && $('name').value.trim()); }
+function updateButtons() { const ok = ready(); $('btnSend').disabled = !ok; $('btnDownload').disabled = !state.processed; }
+function exportPNG() { const c = document.createElement('canvas'); c.width = c.height = CONFIG.SIZE; drawStamp(c.getContext('2d'), true); return c.toDataURL('image/png'); }
+function fileBase() { return `${CLS}_${String($('num').value).padStart(2, '0')}_${$('name').value.trim().replace(/[\\/:*?"<>|]/g, '')}`; }
+
+$('btnDownload').addEventListener('click', () => {
+  const a = document.createElement('a'); a.href = exportPNG(); a.download = (ready() ? fileBase() : '도장도안') + '.png'; a.click();
+  toast('내려받기를 시작했어요');
+});
+$('btnSend').addEventListener('click', async () => {
+  if (!ready()) return;
+  if (!CONFIG.GAS_URL) { setStatus('err', '아직 보내는 주소가 설정되지 않았어요. 선생님께 말씀드리고, 대신 내려받기를 눌러 주세요.'); return; }
+  const btn = $('btnSend'); btn.disabled = true; const orig = btn.textContent; btn.textContent = '보내는 중…';
+  setStatus('', '');
+  try {
+    const payload = { cls: CLS, num: $('num').value, name: $('name').value.trim(), top: $('topText').value.trim(), bottom: $('bottomText').value.trim(), image: exportPNG() };
+    const res = await fetch(CONFIG.GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || '서버 오류');
+    setStatus('ok', `✅ 보냈어요! (${j.file}) 선생님 폴더에 저장되었어요. 고치고 싶으면 다시 보내면 돼요.`);
+    toast('선생님께 보냈어요!');
+  } catch (err) {
+    setStatus('err', '보내기에 실패했어요. 인터넷을 확인하고 다시 눌러 보세요. 계속 안 되면 "내려받기"로 저장해서 선생님께 주세요. (' + err.message + ')');
+  } finally { btn.textContent = orig; updateButtons(); }
+});
+
+render();
+</script>
+</body>
+</html>

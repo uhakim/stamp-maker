@@ -1,0 +1,12 @@
+# 도장 도안 만들기 (stamp-maker)
+
+학생이 패드에서 그림을 넣고 글자를 적으면 25mm 정사각 도장 도안(1000×1000 흑백 PNG)을 만들어 선생님 구글 드라이브로 보내는 웹앱.
+
+- `docs/index.html` 학생용 앱 (GitHub Pages로 서비스)
+- `docs/qr.html` 교사용 접속 QR 출력 페이지
+- `apps-script/Code.gs` 구글 앱스 스크립트 수신기 (드라이브 `도장도안_제출` 폴더에 저장 + `제출기록` 시트 기록)
+
+## 설정
+1. `apps-script/Code.gs`를 Apps Script 프로젝트에 붙여넣고 `setup` 실행(권한 승인) → 배포 > 새 배포 > 웹 앱, 실행 주체 "나", 액세스 "모든 사용자".
+2. 배포된 웹앱 URL을 `docs/index.html`의 `CONFIG.GAS_URL`에 넣는다.
+3. 학급 기본값은 `CONFIG.CLASS`. 주소에 `?cls=4-3`을 붙이면 그 값이 우선.
