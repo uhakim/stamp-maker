@@ -1,0 +1,66 @@
+[
+ {
+  "file": "s00_bouquet.png",
+  "name": "꽃다발"
+ },
+ {
+  "file": "s01_heart_bow.png",
+  "name": "리본 하트"
+ },
+ {
+  "file": "s02_clover.png",
+  "name": "클로버"
+ },
+ {
+  "file": "s03_shooting_star.png",
+  "name": "별똥별"
+ },
+ {
+  "file": "s04_cherry.png",
+  "name": "체리"
+ },
+ {
+  "file": "s05_strawberry.png",
+  "name": "딸기"
+ },
+ {
+  "file": "s06_cloud.png",
+  "name": "구름"
+ },
+ {
+  "file": "s07_moon.png",
+  "name": "달"
+ },
+ {
+  "file": "s08_butterfly.png",
+  "name": "나비"
+ },
+ {
+  "file": "s09_ladybug.png",
+  "name": "무당벌레"
+ },
+ {
+  "file": "s10_bee.png",
+  "name": "꿀벌"
+ },
+ {
+  "file": "s11_paw.png",
+  "name": "발바닥"
+ },
+ {
+  "file": "s12_note.png",
+  "name": "음표"
+ },
+ {
+  "file": "s13_crown.png",
+  "name": "왕관"
+ },
+ {
+  "file": "s14_lollipop.png",
+  "name": "사탕"
+ },
+ {
+  "file": "s15_gift.png",
+  "name": "선물"
+ }
+]

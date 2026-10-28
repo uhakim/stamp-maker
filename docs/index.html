@@ -57,6 +57,7 @@
   .stk { width: 64px; height: 64px; border: 2px solid var(--line); border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .stk:active { border-color: var(--accent); }
   .stk canvas, .stk img { width: 48px; height: 48px; object-fit: contain; display: block; }
+  .stk.wide { width: 120px; } .stk.wide img { width: 104px; }
   .stktools { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; }
   #previewWrap { position: relative; width: 100%; aspect-ratio: 1; background: #fff; border-radius: 14px; border: 1px solid var(--line); overflow: hidden; touch-action: none; }
   #preview { width: 100%; height: 100%; display: block; }
@@ -144,12 +145,7 @@
         <div style="margin-top:12px;font-weight:700;font-size:15px;color:var(--muted)">그림 스티커</div>
         <div class="stkgrid" id="imgTray" style="margin-top:6px"></div>
       </div>
-      <div style="margin-top:12px;font-weight:700;font-size:15px;color:var(--muted)">글자 스티커</div>
-      <div class="row" style="margin-top:6px">
-        <input type="text" id="stkText" maxlength="4" placeholder="예: 사랑해, 최고, 파이팅" autocomplete="off" style="flex:1;min-width:160px">
-        <button class="btn ghost" id="btnAddText">➕ 넣기</button>
-      </div>
-      <p class="hint">스티커는 4개까지 넣을 수 있어요. 미리보기에서 손가락으로 끌어 옮기고, 두 손가락으로 크기를 바꿔요. 실제로는 아주 작게 찍히니 글자는 2~3글자가 좋아요.</p>
+      <p class="hint">스티커는 4개까지 넣을 수 있어요. 미리보기에서 손가락으로 끌어 옮기고, 두 손가락으로 크기를 바꿔요.</p>
       <div class="stktools" id="stkTools" style="display:none">
         <div class="slider"><span>스티커 크기</span><input type="range" id="stkSize" min="80" max="320" value="150"><output id="stkSizeOut"></output></div>
         <div class="row">
@@ -290,9 +286,6 @@ const BORDERS = [
   { id: 'dots',   name: '점' },
   { id: 'wave',   name: '물결' },
   { id: 'zigzag', name: '지그재그' },
-  { id: 'corner_heart',  name: '모서리 하트' },
-  { id: 'corner_star',   name: '모서리 별' },
-  { id: 'corner_flower', name: '모서리 꽃' },
   { id: 'band_heart', name: '하트 띠' },
   { id: 'band_star',  name: '별 띠' },
   { id: 'none',   name: '없음' },
@@ -801,14 +794,6 @@ function drawBorder(ctx, S, id) {
       });
       ctx.closePath(); ctx.stroke(); break;
     }
-    case 'corner_heart': case 'corner_star': case 'corner_flower': {
-      ctx.lineJoin = 'miter'; ctx.lineWidth = 20; ctx.strokeRect(40, 40, S - 80, S - 80);
-      const shape = SHAPES.find(s => s.id === id.slice(7)), sz = 104;
-      for (const [x, y] of [[40, 40], [S - 40, 40], [40, S - 40], [S - 40, S - 40]]) {
-        ctx.fillStyle = '#fff'; ctx.fillRect(x - sz * 0.6, y - sz * 0.6, sz * 1.2, sz * 1.2); ctx.fillStyle = '#000'; shapeAt(shape, x, y, sz);
-      }
-      break;
-    }
     case 'band_heart': case 'band_star': {
       ctx.lineJoin = 'miter'; ctx.lineWidth = 14; ctx.strokeRect(30, 30, S - 60, S - 60); ctx.lineWidth = 10; ctx.strokeRect(112, 112, S - 224, S - 224);
       const shape = SHAPES.find(s => s.id === id.slice(5));
@@ -874,8 +859,6 @@ function addSticker(st) {
     const x = c.getContext('2d'); x.translate(48, 48); x.scale(84, 84); x.fillStyle = '#000'; sh.draw(x);
     d.appendChild(c); d.addEventListener('click', () => addSticker({ type: 'shape', id: sh.id, size: 150 })); tray.appendChild(d);
   });
-  $('btnAddText').addEventListener('click', () => { const t = $('stkText').value.trim(); if (!t) { toast('글자를 먼저 적어요'); $('stkText').focus(); return; } addSticker({ type: 'text', text: t, size: 120 }); $('stkText').value = ''; });
-  $('stkText').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('btnAddText').click(); } });
   $('stkSize').addEventListener('input', () => { const st = state.stickers[state.activeStk]; if (!st) return; st.size = +$('stkSize').value; $('stkSizeOut').textContent = (st.size / 40).toFixed(1) + 'mm'; render(); });
   $('btnStkFlip').addEventListener('click', () => { const st = state.stickers[state.activeStk]; if (st) { st.flip = !st.flip; render(); } });
   $('btnStkDel').addEventListener('click', () => { if (state.activeStk < 0) return; state.stickers.splice(state.activeStk, 1); selectSticker(-1); render(); updateButtons(); });
@@ -885,9 +868,9 @@ function addSticker(st) {
     if (!Array.isArray(list) || !list.length) return;
     $('imgStickerWrap').style.display = 'block'; const it = $('imgTray');
     list.forEach(p => {
-      const d = document.createElement('div'); d.className = 'stk'; d.title = p.name;
+      const d = document.createElement('div'); d.className = 'stk' + (p.wide ? ' wide' : ''); d.title = p.name;
       const im = new Image(); im.src = 'stickers/' + p.file; im.alt = p.name; d.appendChild(im);
-      d.addEventListener('click', () => addSticker({ type: 'img', id: p.file, img: im, size: 160 })); it.appendChild(d);
+      d.addEventListener('click', () => addSticker({ type: 'img', id: p.file, img: im, size: p.wide ? 130 : 160 })); it.appendChild(d);
     });
   }).catch(() => {});
 })();
