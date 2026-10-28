@@ -973,9 +973,20 @@ function updateButtons() { const ok = ready(); $('btnSend').disabled = !ok; $('b
 function exportPNG() { const c = document.createElement('canvas'); c.width = c.height = CONFIG.SIZE; drawStamp(c.getContext('2d'), true); return c.toDataURL('image/png'); }
 function fileBase() { return `${clsValue()}_${String($('num').value).padStart(2, '0')}_${$('name').value.trim().replace(/[\\/:*?"<>|]/g, '')}`; }
 
-$('btnDownload').addEventListener('click', () => {
-  const a = document.createElement('a'); a.href = exportPNG(); a.download = (ready() ? fileBase() : '도장도안') + '.png'; a.click();
-  toast('내려받기를 시작했어요');
+$('btnDownload').addEventListener('click', async () => {
+  const name = (ready() ? fileBase() : '도장도안') + '.png';
+  const c = document.createElement('canvas'); c.width = c.height = CONFIG.SIZE; drawStamp(c.getContext('2d'), true);
+  const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+  const file = new File([blob], name, { type: 'image/png' });
+  // 폰·패드: 공유 창에서 "사진에 저장"을 고를 수 있다
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return; } catch (err) { if (err && err.name === 'AbortError') return; }
+  }
+  // PC: 파일로 내려받기
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  toast('내려받기를 시작했어요. 저장이 안 되면 그림을 길게 눌러 저장해요', 4000);
 });
 $('btnSend').addEventListener('click', async () => {
   if (!ready()) return;
